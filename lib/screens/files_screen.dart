@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import '../providers/storage_provider.dart';
 import '../models/blob_item.dart';
 import '../utils/app_theme.dart';
@@ -461,7 +460,7 @@ class _FilesScreenState extends State<FilesScreen> {
 
   void _downloadFile(BuildContext context, BlobItem blob, StorageProvider provider) async {
     final filePath = await provider.downloadFile(blob);
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     if (filePath != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -488,7 +487,7 @@ class _FilesScreenState extends State<FilesScreen> {
   void _handleBulkDownload(BuildContext context, StorageProvider provider) async {
     final count = provider.selectedBlobNames.length;
     final filePaths = await provider.downloadSelected();
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     if (filePaths.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

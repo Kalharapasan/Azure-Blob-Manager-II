@@ -126,6 +126,89 @@ class _MainShellState extends State<MainShell> {
                 onCategorySelected: _onCategorySelected,
               ),
             ).animate().slideX(begin: -1, end: 0, duration: 400.ms, curve: Curves.easeOutQuart),
+
+          // Download Progress Overlay
+          if (provider.isDownloading)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: isWide ? 24 : 100,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppTheme.border.withOpacity(0.5)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accent.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.file_download_rounded,
+                            color: AppTheme.accent,
+                          ),
+                        ).animate(onPlay: (c) => c.repeat(reverse: true))
+                         .shimmer(duration: 1.5.seconds),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Downloading ${provider.downloadingFileName}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: provider.downloadProgress,
+                                  backgroundColor: AppTheme.border,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accent),
+                                  minHeight: 6,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          '${(provider.downloadProgress * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ).animate().slideY(begin: 0.5, end: 0, curve: Curves.easeOutBack),
         ],
       ),
       

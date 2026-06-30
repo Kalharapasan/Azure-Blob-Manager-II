@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/blob_item.dart';
 import '../models/storage_stats.dart';
 import '../services/azure_storage_service.dart';
@@ -29,6 +30,10 @@ class StorageProvider extends ChangeNotifier {
   bool _isUploading = false;
   double _uploadProgress = 0;
   String _uploadingFileName = '';
+  
+  bool _isDownloading = false;
+  double _downloadProgress = 0;
+  String _downloadingFileName = '';
   
   String? _vaultPassword;
   String? _accountName;
@@ -65,6 +70,11 @@ class StorageProvider extends ChangeNotifier {
   bool get isUploading => _isUploading;
   double get uploadProgress => _uploadProgress;
   String get uploadingFileName => _uploadingFileName;
+  
+  bool get isDownloading => _isDownloading;
+  double get downloadProgress => _downloadProgress;
+  String get downloadingFileName => _downloadingFileName;
+
   bool get hasVaultPassword => _vaultPassword != null && _vaultPassword!.isNotEmpty;
   String? get accountName => _accountName;
   VaultMode get currentVault => _currentVault;
@@ -382,5 +392,63 @@ class StorageProvider extends ChangeNotifier {
       privateCount: blobs.where((b) => b.isPrivate).length,
       blobs: blobs,
     );
+  }
+
+  Future<String?> downloadFile(BlobItem blob) async {
+    _isDownloading = true;
+    _downloadProgress = 0;
+    _downloadingFileName = blob.displayName;
+    notifyListeners();
+
+    try {
+      final bytes = await AzureStorageService.downloadBlob(
+        blob.name,
+        onProgress: (p) {
+          _downloadProgress = p;
+          notifyListeners();
+        },
+      );
+
+      Directory? dir;
+      if (Platform.isAndroid) {
+        try {
+          dir = await getDownloadsDirectory();
+        } catch (_) {
+          // fallback
+        }
+      }
+      dir ??= await getApplicationDocumentsDirectory();
+
+      final filePath = '${dir.path}/${blob.displayName}';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      _downloadProgress = 1.0;
+      notifyListeners();
+      await Future.delayed(const Duration(milliseconds: 200));
+      return filePath;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    } finally {
+      _isDownloading = false;
+      _downloadProgress = 0;
+      _downloadingFileName = '';
+      notifyListeners();
+    }
+  }
+
+  Future<List<String>> downloadSelected() async {
+    final toDownload = _allBlobs.where((b) => _selectedBlobNames.contains(b.name)).toList();
+    final List<String> paths = [];
+    for (final blob in toDownload) {
+      final path = await downloadFile(blob);
+      if (path != null) {
+        paths.add(path);
+      }
+    }
+    clearSelection();
+    return paths;
   }
 }

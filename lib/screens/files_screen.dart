@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import '../providers/storage_provider.dart';
 import '../models/blob_item.dart';
 import '../utils/app_theme.dart';
@@ -49,11 +51,16 @@ class _FilesScreenState extends State<FilesScreen> {
               onPressed: () => setState(() => _isGridView = !_isGridView),
             ),
           ],
-          if (isSelectionMode)
+          if (isSelectionMode) ...[
+            IconButton(
+              icon: const Icon(Icons.file_download_rounded, color: AppTheme.accent),
+              onPressed: () => _handleBulkDownload(context, provider),
+            ),
             IconButton(
               icon: const Icon(Icons.delete_sweep_rounded, color: AppTheme.error),
               onPressed: () => _showBulkDeleteConfirm(context, provider),
             ),
+          ],
           const SizedBox(width: 8),
         ],
       ),
@@ -262,6 +269,7 @@ class _FilesScreenState extends State<FilesScreen> {
       onSelected: (val) => _handleAction(context, val, blob, provider),
       itemBuilder: (context) => [
         const PopupMenuItem(value: 'view', child: _ActionRow(Icons.visibility_rounded, 'View')),
+        const PopupMenuItem(value: 'download', child: _ActionRow(Icons.file_download_rounded, 'Download')),
         PopupMenuItem(
           value: 'vault', 
           child: _ActionRow(
@@ -279,6 +287,7 @@ class _FilesScreenState extends State<FilesScreen> {
   void _handleAction(BuildContext context, String action, BlobItem blob, StorageProvider provider) async {
     switch (action) {
       case 'view': _showPreview(context, blob); break;
+      case 'download': _downloadFile(context, blob, provider); break;
       case 'rename': _showRenameDialog(context, blob, provider); break;
       case 'delete': _showDeleteConfirm(context, blob, provider); break;
       case 'vault': 
@@ -322,14 +331,19 @@ class _FilesScreenState extends State<FilesScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      final provider = context.read<StorageProvider>();
+                      _downloadFile(context, blob, provider);
+                    },
+                    icon: const Icon(Icons.file_download_rounded),
+                    label: const Text('Download'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 18),
                       side: const BorderSide(color: AppTheme.border),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: const Text('Dismiss'),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -443,6 +457,54 @@ class _FilesScreenState extends State<FilesScreen> {
         ],
       ),
     );
+  }
+
+  void _downloadFile(BuildContext context, BlobItem blob, StorageProvider provider) async {
+    final filePath = await provider.downloadFile(blob);
+    if (!mounted) return;
+
+    if (filePath != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Downloaded ${blob.displayName} successfully!'),
+          backgroundColor: AppTheme.success,
+          action: SnackBarAction(
+            label: 'OPEN',
+            textColor: Colors.white,
+            onPressed: () => OpenFilex.open(filePath),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download: ${provider.errorMessage}'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
+  }
+
+  void _handleBulkDownload(BuildContext context, StorageProvider provider) async {
+    final count = provider.selectedBlobNames.length;
+    final filePaths = await provider.downloadSelected();
+    if (!mounted) return;
+
+    if (filePaths.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully downloaded $count files!'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download files: ${provider.errorMessage}'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
   }
 }
 

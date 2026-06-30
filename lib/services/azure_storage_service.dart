@@ -171,16 +171,30 @@ class AzureStorageService {
     }
   }
 
-  /// Get blob content as bytes
-  static Future<Uint8List> downloadBlob(String blobName) async {
+  /// Get blob content as bytes with optional progress callback
+  static Future<Uint8List> downloadBlob(String blobName, {Function(double)? onProgress}) async {
     try {
       final url = '$baseUrl/$blobName?$sasKey'.replaceAll('??', '?');
-      final response = await http.get(Uri.parse(url), headers: _headers);
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers.addAll(_headers);
 
-      if (response.statusCode == 200) {
-        return response.bodyBytes;
+      final streamedResponse = await http.Client().send(request);
+      final total = streamedResponse.contentLength ?? 0;
+      int received = 0;
+
+      final List<int> bytes = [];
+      await for (final chunk in streamedResponse.stream) {
+        bytes.addAll(chunk);
+        received += chunk.length;
+        if (total > 0 && onProgress != null) {
+          onProgress(received / total);
+        }
+      }
+
+      if (streamedResponse.statusCode == 200) {
+        return Uint8List.fromList(bytes);
       } else {
-        throw AzureException('Download failed: ${response.statusCode}');
+        throw AzureException('Download failed: ${streamedResponse.statusCode}');
       }
     } catch (e) {
       throw AzureException('Download error: $e');

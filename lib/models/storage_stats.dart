@@ -30,11 +30,11 @@ class StorageStats {
     return '${(totalSize / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
-  double videoPercent  => totalFiles == 0 ? 0 : videoCount / totalFiles;
-  double imagePercent  => totalFiles == 0 ? 0 : imageCount / totalFiles;
-  double musicPercent  => totalFiles == 0 ? 0 : musicCount / totalFiles;
-  double documentPercent => totalFiles == 0 ? 0 : documentCount / totalFiles;
-  double otherPercent  => totalFiles == 0 ? 0 : otherCount / totalFiles;
+  double get videoPercent  => totalFiles == 0 ? 0 : videoCount / totalFiles;
+  double get imagePercent  => totalFiles == 0 ? 0 : imageCount / totalFiles;
+  double get musicPercent  => totalFiles == 0 ? 0 : musicCount / totalFiles;
+  double get documentPercent => totalFiles == 0 ? 0 : documentCount / totalFiles;
+  double get otherPercent  => totalFiles == 0 ? 0 : otherCount / totalFiles;
 
   Map<String, int> get categoryCounts => {
     'Videos': videoCount,
